@@ -190,6 +190,12 @@ export interface TokenResponse {
   must_change_password?: boolean;
 }
 
+export interface UserInfo {
+  username: string;
+  role: string;
+  must_change_password: boolean;
+}
+
 export interface ScreenerResultItem {
   symbol: string;
   price: number;

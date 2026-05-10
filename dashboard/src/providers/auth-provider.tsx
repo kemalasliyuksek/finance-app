@@ -1,7 +1,7 @@
 "use client";
 
 import api, { setAccessToken } from "@/lib/api-client";
-import type { TokenResponse } from "@/types/api";
+import type { TokenResponse, UserInfo } from "@/types/api";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -16,8 +16,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   username: string | null;
+  mustChangePassword: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Şifre başarıyla değiştirildikten sonra flag'i düşür ve dashboard'a yönlendir. */
+  clearMustChangePassword: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -43,10 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(data.access_token);
         localStorage.setItem("refresh_token", data.refresh_token);
         setIsAuthenticated(true);
-        return api.get<{ username: string }>("/auth/me");
+        return api.get<UserInfo>("/auth/me");
       })
       .then(({ data }) => {
         setUsername(data.username);
+        setMustChangePassword(data.must_change_password);
       })
       .catch(() => {
         localStorage.removeItem("refresh_token");
@@ -67,9 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       setUsername(user);
 
-      // Zorunlu şifre değişikliği kontrolü
-      if (data.must_change_password) {
-        router.push("/settings");
+      const forceChange = Boolean(data.must_change_password);
+      setMustChangePassword(forceChange);
+
+      if (forceChange) {
+        router.push("/change-password");
       } else {
         router.push("/dashboard");
       }
@@ -82,12 +89,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("refresh_token");
     setIsAuthenticated(false);
     setUsername(null);
+    setMustChangePassword(false);
     router.push("/login");
+  }, [router]);
+
+  const clearMustChangePassword = useCallback(() => {
+    setMustChangePassword(false);
+    router.push("/dashboard");
   }, [router]);
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, isLoading, username, login, logout }}
+      value={{
+        isAuthenticated,
+        isLoading,
+        username,
+        mustChangePassword,
+        login,
+        logout,
+        clearMustChangePassword,
+      }}
     >
       {children}
     </AuthContext.Provider>

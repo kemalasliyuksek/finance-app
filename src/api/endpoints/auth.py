@@ -101,9 +101,23 @@ async def refresh_token(
 
 
 @router.get("/me", response_model=UserInfo)
-async def me(username: str = Depends(get_current_user)) -> UserInfo:
-    """Mevcut kullanıcı bilgisi."""
-    return UserInfo(username=username)
+async def me(
+    username: str = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserInfo:
+    """Mevcut kullanıcı bilgisi (must_change_password flag'i dahil)."""
+    repo = UserRepository(db)
+    user = await repo.get_by_username(username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Kullanıcı bulunamadı",
+        )
+    return UserInfo(
+        username=user.username,
+        role=user.role,
+        must_change_password=user.must_change_password,
+    )
 
 
 @router.post("/change-password")

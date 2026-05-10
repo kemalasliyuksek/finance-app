@@ -26,6 +26,7 @@ class RefreshRequest(BaseModel):
 class UserInfo(BaseModel):
     username: str
     role: str = "admin"
+    must_change_password: bool = False
 
 
 class ChangePasswordRequest(BaseModel):
