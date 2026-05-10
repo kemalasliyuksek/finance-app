@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.egg-info
+.eggs
+.venv
+venv
+env
+.pytest_cache
+.mypy_cache
+.coverage
+htmlcov
+
+# Local data (postgres/redis volumes, logs)
+data
+logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.example
+
+# IDE / OS
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Dashboard — built separately by dashboard/Dockerfile
+dashboard
+
+# Docs / config / tests not needed at runtime
+docs
+README.md
+README.tr.md
+LICENSE
+CLAUDE.md
+config-presets/snapshots
+docker-compose.yml
+docker-compose.override.yml
+
+# Claude Code local state
+.claude

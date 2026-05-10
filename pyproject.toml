@@ -1,0 +1,74 @@
+[project]
+name = "finance-app"
+version = "0.1.0"
+description = "Kripto trading bot - Binance teknik analiz ve sentiment tabanlı al/sat sistemi"
+requires-python = ">=3.12"
+dependencies = [
+    # Web Framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    # Database
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    # Redis
+    "redis[hiredis]>=5.2.0",
+    # Binance
+    "python-binance>=1.0.22",
+    # Technical Analysis
+    "pandas-ta>=0.3.14b",
+    "pandas>=2.2.0",
+    "numpy>=2.1.0",
+    # HTTP Client
+    "httpx>=0.28.0",
+    # Telegram
+    "python-telegram-bot>=21.9",
+    # Config & Validation
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    # Logging & Monitoring
+    "structlog>=24.4.0",
+    "prometheus-client>=0.21.0",
+    "sentry-sdk[fastapi]>=2.19.0",
+    # Scheduler
+    "apscheduler>=3.10.4",
+    # Utils
+    "orjson>=3.10.0",
+    "python-dotenv>=1.0.1",
+    # Auth & Security
+    "pyjwt>=2.9.0",
+    "bcrypt>=4.2.0",
+    "slowapi>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "httpx>=0.28.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]

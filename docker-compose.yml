@@ -1,0 +1,147 @@
+services:
+  trading-bot:
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${DOCKER_OWNER:-finance-app}/finance-app-bot:${DOCKER_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-bot
+    restart: unless-stopped
+    networks:
+      - default
+    environment:
+      - APP_MODE=${APP_MODE:-sandbox}
+      - TRADING_MODE=${TRADING_MODE:-semi_auto}
+      - BINANCE_API_KEY=${BINANCE_API_KEY:-}
+      - BINANCE_API_SECRET=${BINANCE_API_SECRET:-}
+      - BINANCE_TESTNET_API_KEY=${BINANCE_TESTNET_API_KEY:-}
+      - BINANCE_TESTNET_API_SECRET=${BINANCE_TESTNET_API_SECRET:-}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - TRADING_PAIRS=${TRADING_PAIRS:-["BTCUSDT","ETHUSDT"]}
+      - CANDLE_INTERVALS=${CANDLE_INTERVALS:-["15m","1h"]}
+      - RISK_PER_TRADE_PCT=${RISK_PER_TRADE_PCT:-0.02}
+      - MAX_CONCURRENT_POSITIONS=${MAX_CONCURRENT_POSITIONS:-2}
+      - DAILY_LOSS_LIMIT_PCT=${DAILY_LOSS_LIMIT_PCT:-0.05}
+      - MIN_BALANCE_USDT=${MIN_BALANCE_USDT:-50.0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:3003"]}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ${DATA_DIR:-./data}/logs:/app/logs
+    depends_on:
+      trading-redis:
+        condition: service_healthy
+      trading-postgres:
+        condition: service_healthy
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8000"
+      - "prometheus.path=/metrics"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  trading-telegram:
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${DOCKER_OWNER:-finance-app}/finance-app-bot:${DOCKER_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-telegram
+    command: ["python", "-m", "src.notifications.telegram_bot"]
+    restart: unless-stopped
+    environment:
+      - APP_MODE=${APP_MODE:-sandbox}
+      - TRADING_MODE=${TRADING_MODE:-semi_auto}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TRADING_PAIRS=${TRADING_PAIRS:-["BTCUSDT","ETHUSDT"]}
+      - CANDLE_INTERVALS=${CANDLE_INTERVALS:-["15m","1h"]}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    volumes:
+      - ${DATA_DIR:-./data}/logs:/app/logs
+    networks:
+      - default
+    depends_on:
+      trading-bot:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis; r = redis.from_url('${REDIS_URL}'); r.ping()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  trading-dashboard:
+    image: ${DOCKER_REGISTRY:-ghcr.io}/${DOCKER_OWNER:-finance-app}/finance-app-dashboard:${DOCKER_IMAGE_TAG:-latest}
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws}
+    container_name: trading-dashboard
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:8000/ws}
+    ports:
+      - "3003:3000"
+    networks:
+      - default
+    depends_on:
+      trading-bot:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  trading-postgres:
+    image: postgres:16-alpine
+    container_name: trading-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: trading_bot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: trading_bot
+    volumes:
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trading-redis:
+    image: redis:7-alpine
+    container_name: trading-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ${DATA_DIR:-./data}/redis:/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  default:
+    name: trading-bot_default

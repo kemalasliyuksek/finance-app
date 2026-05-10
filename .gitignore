@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Local data directory (Docker bind mounts: postgres, redis, app logs)
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Docker
+docker-compose.override.yml
+
+# Dashboard (Next.js)
+dashboard/node_modules/
+dashboard/.next/
+dashboard/.env.local
+
+# Claude Code local state (do not commit per-machine settings)
+.claude/settings.local.json
+
+# Personal trading config snapshots — keep your own tunings out of version control.
+# The tracked baseline.json stays as a starting point; everything in snapshots/ is local.
+config-presets/snapshots/*.json
+!config-presets/snapshots/.gitkeep

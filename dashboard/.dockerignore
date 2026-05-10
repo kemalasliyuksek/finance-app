@@ -1,0 +1,23 @@
+# Node
+node_modules
+npm-debug.log*
+
+# Next.js build outputs
+.next
+out
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE / OS
+.vscode
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
